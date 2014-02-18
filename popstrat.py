@@ -1,8 +1,21 @@
+# This file is part of Python GRN implementation.
+# Architype is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# Architype is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+# You should have received a copy of the GNU Lesser General Public License 
+# along with GRN.  If not, see <http://www.gnu.org/licenses/>.
+# Author Jonathan Byrne 2014
+
 """Simple Evolutionary strategy algorithm"""
 import random, graph
 
 class Evostrategy:
-    """A population based evolutionary strategy using the 1/5th rule"""    
+    """A population based evolutionary strategy using the 1/5th rule"""
     def __init__(self, genome_size, pop_size):
         self.genome_size = genome_size
         self.pop_size = pop_size
@@ -46,7 +59,7 @@ class Evostrategy:
         # make sure self.mut_rate is within boundaries
         if self.mut_rate < 0.0005: self.mut_rate = 0.0005
         if self.mut_rate > 0.5: self.mut_rate = 0.5
-                
+
     def onemax_fitness(self, indiv):
         """sum the number of ones in the genome"""
         fitness = sum(indiv[i] == self.target[i]
@@ -57,7 +70,7 @@ class Evostrategy:
         for child in children:
             for idx, parent in enumerate(self.pop):
                 if parent['fitness'] < child['fitness']:
-                    self.success_mut += 1      
+                    self.success_mut += 1
                     parent['genome'] = child['genome']
                     parent['fitness'] = child['fitness']
                     parent['testfit'] = child['testfit']
@@ -70,7 +83,7 @@ class Evostrategy:
             self.pop[idx]['genome'] = children[idx]['genome']
             self.pop[idx]['testfit'] = children[idx]['testfit']
         return children
-                        
+
     def iterate(self, children):
         # sort the parent and child pops
         self.gen_count += 1
@@ -83,7 +96,7 @@ class Evostrategy:
             children = self.generational_replacement(children)
         else:
             children = self.steady_state_replacment(children)
-            
+
         # re-sort pop and mutate
         self.pop.sort(key=lambda k: k['fitness'])
         children = []
@@ -102,20 +115,20 @@ def main():
         evo = Evostrategy(5000, 100)
         children = evo.iterate(evo.pop)
         best_list = []
-        
+
         for i in range(100):
 
             for child in children:
                 child['fitness'] = evo.onemax_fitness(child['genome'])
             children = evo.iterate(children)
 
-            
+
             if evo.adaptive:
                 evo.adapt_mutation()
 
             best_list.append(evo.pop[-1]['fitness'])
         run_list.append(best_list)
-        
+
     graph.plot_ave(run_list, "steadystate")
 if __name__ == "__main__":
     main()

@@ -1,5 +1,18 @@
-""" 
-Evolver uses a population based ES to evolve GRNS. 
+# This file is part of Python GRN implementation.
+# Architype is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# Architype is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+# You should have received a copy of the GNU Lesser General Public License 
+# along with GRN.  If not, see <http://www.gnu.org/licenses/>.
+# Author Jonathan Byrne 2014
+
+"""
+Evolver uses a population based ES to evolve GRNS.
 It can run on a single core or distribute the evaluations.
 """
 
@@ -19,21 +32,21 @@ def singlecore(filename, delta, popsize, generations):
             bestidx = results.index(max(results))
             child['fitness'] = results[bestidx]
             print "fitness:", child['fitness']
-            
+
         children = evo.iterate(children)
         bestgenome = evo.pop[-1]['genome']
         results, conclist = run_grn(bestgenome, delta)
         filename = "best_gen_"+str(i)
         graph.plot_2d(conclist, filename)
-    
+
         if evo.adaptive:
             evo.adapt_mutation()
 
         best_list.append(evo.pop[-1]['fitness'])
         mut_list.append(evo.mut_rate)
-        
+
     print "best overall fitness", evo.pop[-1]['fitness']
-    
+
     graph.plot_2d([best_list], 'bestfit')
     graph.plot_2d([mut_list], 'mutrate')
 
@@ -41,7 +54,7 @@ def multicore(filename, syncsize, offset, delta, popsize, generations):
     """ Uses parallel python to evaluate, PP can also be used to
     distribute evaluations to machines accross the network"""
     #set up the evo strategy
-    
+
     evo = popstrat.Evostrategy(5000, popsize)
     children = evo.iterate(evo.pop)
 
@@ -50,7 +63,7 @@ def multicore(filename, syncsize, offset, delta, popsize, generations):
     print "Starting pp with", job_server.get_ncpus(), "workers"
 
     for _ in range(generations):
-        jobs = [(child, job_server.submit(run_grn, 
+        jobs = [(child, job_server.submit(run_grn,
                                           (child['genome'], delta,
                                            syncsize, offset),
                                            (),
@@ -77,7 +90,7 @@ def multicore(filename, syncsize, offset, delta, popsize, generations):
     bestresult, conclist = run_grn(bestgenome, delta, syncsize, offset, restopname)
 
     bestidx = bestresult.index(max(bestresult))
-    fitness = round(max(bestresult),1)
+    fitness = round(max(bestresult), 1)
     colors = []
 
     for idx, result in enumerate(bestresult):
@@ -91,14 +104,14 @@ def multicore(filename, syncsize, offset, delta, popsize, generations):
         elif result > 0:
             colors.append('r')
         # draw TFs in blue
-        else: 
+        else:
             colors.append('b')
 
     print "colors", colors
     graphname = filename.split('/')[2]
     graphname = graphname[:-4] + "-F" + str(fitness)
-    graph.plot_2d(conclist, graphname, colors, (0,1))        
-        
+    graph.plot_2d(conclist, graphname, colors, (0, 1))
+
 def main():
     import os
     """Run an experiment"""
@@ -117,6 +130,6 @@ def main():
     if not os.path.exists(pathname): os.makedirs(pathname)
     multicore(filename, syncsize, offset,
               delta=1, popsize=10, generations=50)
-        
+
 if __name__ == "__main__":
     main()

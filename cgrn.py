@@ -1,3 +1,16 @@
+# This file is part of Python GRN implementation.
+# Architype is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# Architype is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+# You should have received a copy of the GNU Lesser General Public License 
+# along with GRN.  If not, see <http://www.gnu.org/licenses/>.
+# Author Jonathan Byrne 2014
+
 """
 Gene Regulatory Model based on the work of Wolfgang Banzhaf
 and Miguel Nicolau.
@@ -20,7 +33,7 @@ class Gene:
         self.promoter =  info[0:32]
         self.enhancer = info[32:64]
         self.inhibitor = info[64:96]
-        self.geneinfo = info[96:256] 
+        self.geneinfo = info[96:256]
         self.protein = []
         self.create_protein()
         self.concentration = 0.0
@@ -47,7 +60,7 @@ class GRN:
             self.genome = GRN.random_init(5000)
         else:
             self.genome = genome
-            
+
         ct.cdll.LoadLibrary('libgrn.so')
         self.grnlib = ct.CDLL('libgrn.so')
         self.promoters = [[[0]*8, "TF"], [[1]*8, "P"]]
@@ -72,7 +85,7 @@ class GRN:
         indiv = [random.randint(0, 1) for _ in range(0, genome_size)]
         return indiv
 
-        
+
     def read_genome(self, filename):
         """parse genome list from file"""
         gene_file = open(filename, "r")
@@ -83,28 +96,28 @@ class GRN:
         index = 0
         gene_cnt = 0
         max_length = len(self.genome) - 256
-        
+
         if not self.sensible_parsing:
             index = 96 - len(self.promoters[0][0])
             max_length = len(self.genome) - (160 + len(self.promoters[0][0]))
-            
+
         while index <= max_length:
             for seq in self.promoters:
                 found = self.genome[index:index+len(seq[0])] == seq[0]
-                
+
                 if found and index <= max_length:
                     if seq[1] == "TF":
                         self.tf_genes.append(gene_cnt)
                     elif seq[1] == "P":
                         self.p_genes.append(gene_cnt)
-                        
+
                     if self.sensible_parsing:
                         gene_segment = self.genome[index:index + 256]
                     else:
                         gene_segment = reorder_gene(index,
                                                     seq[0],
                                                     self.genome)
-                    self.genes.append(Gene( gene_segment, 
+                    self.genes.append(Gene( gene_segment,
                                            seq[1]))
                     index += 255
                     gene_cnt += 1
@@ -116,7 +129,7 @@ class GRN:
         e_total = 0
         for idx in self.extras:
             e_total += self.genes[idx].concentration
-            
+
         for gene in self.genes:
             self.conc_list.append([])
             if gene.gene_type == "TF":
@@ -130,10 +143,10 @@ class GRN:
         segment = [random.randint(0, 1) for _ in range(256)]
         extra_gene = Gene(segment, gene_type)
         extra_gene.concentration = concentration
-        
+
         if not signature == None:
             extra_gene.protein = signature
-            
+
         self.genes.append(extra_gene)
         self.conc_list.append([])
 
@@ -171,12 +184,12 @@ class GRN:
                 for idy in range(len(self.genes)-len(self.extras)):
                     target = self.genes[idy]
                     enhancer, inhibitor = target.enhancer, target.inhibitor
-                    
+
                     xor_enhance = sum(protein[i] != enhancer[i]
                                       for i in range(len(protein)))
                     xor_inhibit = sum(protein[i] != inhibitor[i]
                                       for i in range(len(protein)))
-                
+
                     enh_matrix[idx][idy] = xor_enhance
                     inh_matrix[idx][idy] = xor_inhibit
 
@@ -186,15 +199,15 @@ class GRN:
         inh_matrix = inh_matrix - max_observed
 
         # precalculate the exponential function and generate weight matrix
-        vector_exp = np.vectorize(math.exp) 
+        vector_exp = np.vectorize(math.exp)
         enh_matrix = vector_exp(enh_matrix)
         inh_matrix = vector_exp(inh_matrix)
         self.weight_matrix = enh_matrix - inh_matrix
-        
+
     def regulate_matrix(self, iterations, restop=False):
         """ Grind the concs against the weights and normalise.
-        Pass concs, weights tfs and p genes to the 
-        grnlib for fast calculation"""        
+        Pass concs, weights tfs and p genes to the
+        grnlib for fast calculation"""
         weights = self.weight_matrix.astype(np.float64)
         cweights = weights.ctypes.data_as(ct.POINTER(ct.c_double))
         rows, cols = self.weight_matrix.shape
@@ -202,7 +215,7 @@ class GRN:
         concs = []
         for gene in self.genes:
             concs.append(gene.concentration)
-        e_total = ct.c_double(sum([i.concentration for i in self.genes 
+        e_total = ct.c_double(sum([i.concentration for i in self.genes
                                    if i.gene_type.startswith('EXTRA')]))
         # compute array lengths
         conc_len = len(concs)
@@ -228,14 +241,14 @@ class GRN:
                 if difference < 1E-10:
                     break
                 old_concs = np.copy(tmp_concs)
-                
+
             if bzero == 1:
                 self.below_zero = True
 
 
         outfile = open(self.logfile, 'a')
         outfile.write(str(current)+'\n')
-        outfile.close() 
+        outfile.close()
         if restop == True:
             self.sync_array.append(current)
         # cast ctypes to numpy and set gene values
@@ -245,7 +258,7 @@ class GRN:
         for idx, gene in enumerate(self.genes):
             gene.concentration = final_concs[idx]
             self.conc_list[idx].append(final_concs[idx])
-            
+
 def main():
     """ Code to compare with eoins grn"""
     random.seed(2)
@@ -272,7 +285,7 @@ def main():
         # print opstring
         grn.regulate_matrix(10000)
 
-    
+
     # speed test code
     # import time
     # start_time = time.time()
@@ -280,9 +293,9 @@ def main():
     #     random.seed(seed)
     #     stabiter = 10000
     #     runiter = 1000
-        
+
     #     grn = GRN(delta=1)
-    #     grn.build_genes()    
+    #     grn.build_genes()
     #     grn.add_extra("EXTRA_sineval", 0.0, [0]*32)
     #     grn.precalc_matrix()
     #     grn.regulate_matrix(stabiter)
